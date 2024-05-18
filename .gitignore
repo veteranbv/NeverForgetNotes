@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.egg-info/
+*.eggs/
+
+# Environments
+.env
+.venv/
+env/
+venv/
+ENV/
+venv_pyannote/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python cache files
+app/__pycache__/
+
+# Ignore all files in these directories, but keep the directories
+audio/input/*
+audio/processed/*
+audio/temp/*
+output/archive/*
+output/diarizations/*
+output/merged_output/*
+output/transcriptions/*
+output/transcriptions/temp/*
+test/data/*
