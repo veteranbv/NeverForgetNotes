@@ -1,5 +1,7 @@
 # Audio to Diarized Transcription Pipeline
 
+![Banner](./img/top.jpeg)
+
 This project provides an automated pipeline for diarizing and transcribing audio recordings, specifically focusing on Apple Voice Memos (or .m4a files). The pipeline utilizes Whisper for audio transcription and pyannote.audio for speaker diarization. The output is a merged transcript with speaker labels and timestamps.
 
 ## Table of Contents
