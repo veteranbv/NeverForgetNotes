@@ -1,9 +1,10 @@
 import whisper
+import torch
 import os
 import logging
 
 def transcribe_audio(audio_path, output_dir, openapi_token):
-    """Transcribes a single audio chunk using Whisper.
+    """Transcribes a single audio chunk using Whisper with GPU if available.
 
     Args:
         audio_path (str): Path to the audio chunk.
@@ -14,7 +15,8 @@ def transcribe_audio(audio_path, output_dir, openapi_token):
         str: The transcribed text.
     """
     try:
-        model = whisper.load_model("small")
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model = whisper.load_model("small", device=device)
         result = model.transcribe(audio_path)
         full_transcription = result['text']
 
