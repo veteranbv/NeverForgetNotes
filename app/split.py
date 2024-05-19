@@ -12,4 +12,4 @@ def split_audio_by_diarization(audio_path, diarization, output_dir):
         chunk = audio[start:end]
         chunk_path = os.path.join(output_dir, f"{os.path.basename(audio_path).replace('.wav', '')}_speaker_{speaker}_chunk_{start}_{i}.wav") 
         chunk.export(chunk_path, format="wav")
-        logging.info(f"Saved audio chunk for Speaker {speaker} to {chunk_path}")  # This message will now be at WARNING level
+        # logging.info(f"Saved audio chunk for Speaker {speaker} to {chunk_path}")  # This message will now be at WARNING level
