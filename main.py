@@ -7,6 +7,7 @@ from app.transcription import transcribe_audio
 from app.diarization import diarize_audio
 from app.merge import merge_transcriptions, merge_raw_transcriptions
 from app.split import split_audio_by_diarization
+from app.summarize import summarize_transcript
 
 logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -33,8 +34,10 @@ def main():
     merged_output_dir = './output/merged_output'
     processed_dir = './audio/processed'
     temp_dir = './audio/temp'
+    summary_output_dir = './output/summary'
     hf_auth_token = os.getenv('HF_AUTH_TOKEN')
-    openapi_token = os.getenv('OPENAI_API_KEY')
+    openai_api_key = os.getenv('OPENAI_API_KEY')
+    summary_prompt_file = './prompts/summary_prompt.txt'
 
     ensure_dir(input_dir)
     ensure_dir(output_dir)
@@ -44,6 +47,7 @@ def main():
     ensure_dir(merged_output_dir)
     ensure_dir(processed_dir)
     ensure_dir(temp_dir)
+    ensure_dir(summary_output_dir)
 
     audio_files = glob(f'{input_dir}/*.m4a')
     if not audio_files:
@@ -61,13 +65,21 @@ def main():
 
         if diarization is not None:
             split_audio_by_diarization(wav_file, diarization, temp_dir)
-            
+
             chunk_files = glob(f'{temp_dir}/*.wav')
-            for chunk_file in tqdm(chunk_files, desc="Transcribing chunks", leave=False): 
-                transcription = transcribe_audio(chunk_file, temp_transcriptions_dir, openapi_token)
+            for chunk_file in tqdm(chunk_files, desc="Transcribing chunks", leave=False):
+                transcription = transcribe_audio(chunk_file, temp_transcriptions_dir, openai_api_key)
 
             raw_merged_transcript = merge_raw_transcriptions(temp_transcriptions_dir, wav_file, transcriptions_dir)
             merged_output = merge_transcriptions(raw_merged_transcript, diarization, wav_file, merged_output_dir)
+
+            # Summarize the merged transcript
+            summary = summarize_transcript(merged_output, summary_prompt_file, openai_api_key)
+            summary_file = os.path.join(summary_output_dir, os.path.basename(wav_file).replace('.wav', '_summary.txt'))
+            with open(summary_file, 'w') as f:
+                f.write(summary)
+            logging.info(f"Summary saved to {summary_file}")
+
         else:
             logging.warning(f"Skipping transcription and merge for {audio_file_no_spaces} due to missing diarization.")
 
@@ -76,7 +88,7 @@ def main():
     # Clean up temporary files 
     for file in os.listdir(temp_dir):
         os.remove(os.path.join(temp_dir, file))
-    for file in os.listdir(temp_transcriptions_dir): 
+    for file in os.listdir(temp_transcriptions_dir):
         os.remove(os.path.join(temp_transcriptions_dir, file))
     logging.info("Processing completed.")
 
