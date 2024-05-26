@@ -40,6 +40,7 @@ audio/input/*
 audio/not_processed/*
 audio/processed/*
 output/*
+prompts/prophetic_prompt.txt
 test/data/*
 temp/chunks/*
 temp/transcriptions/*
