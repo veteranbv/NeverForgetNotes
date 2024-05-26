@@ -26,7 +26,7 @@ def ensure_dir(directory):
 
 def convert_to_wav(input_path, output_path):
     try:
-        result = subprocess.run(
+        subprocess.run(
             ['ffmpeg', '-i', input_path, '-acodec', 'pcm_s16le', '-ac', '1', '-ar', '16000', output_path],
             check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
@@ -109,7 +109,7 @@ def get_audio_metadata(file_path):
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         date = result.stdout.strip().split('=')[-1]
         return datetime.strptime(date, '%Y-%m-%d').strftime('%Y-%m-%d')
-    except:
+    except (subprocess.CalledProcessError, ValueError):
         return datetime.now().strftime('%Y-%m-%d')
 
 def main():
@@ -165,7 +165,7 @@ def main():
             step_start_time = time.time()
             chunk_files = glob(f'{output_dirs["temp_chunks"]}/*.wav')
             for chunk_file in tqdm(chunk_files, desc="Transcribing chunks", leave=False):
-                transcription = transcribe_audio(chunk_file, output_dirs['temp_transcriptions'], openai_api_key)
+                transcribe_audio(chunk_file, output_dirs['temp_transcriptions'], openai_api_key)
             transcription_time = time.time() - step_start_time
 
             step_start_time = time.time()

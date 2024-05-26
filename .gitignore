@@ -37,6 +37,7 @@ app/__pycache__/
 
 # Ignore all files in these directories, but keep the directories
 audio/input/*
+audio/not_processed/*
 audio/processed/*
 output/*
 test/data/*

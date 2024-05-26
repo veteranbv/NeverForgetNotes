@@ -1,6 +1,6 @@
 from pydub import AudioSegment
 import os
-import logging
+# import logging
 
 def split_audio_by_diarization(audio_path, diarization, output_dir):
     """Splits the audio into chunks based on the diarization output.
