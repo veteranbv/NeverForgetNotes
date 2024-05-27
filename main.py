@@ -118,7 +118,7 @@ def main():
     base_output_dir = './output'
     hf_auth_token = os.getenv('HF_AUTH_TOKEN')
     openai_api_key = os.getenv('OPENAI_API_KEY')
-    summary_prompt_file = './prompts/summary_prompt.txt'
+    summary_prompt_file = './prompts/prompt.txt'
 
     ensure_dir(input_dir)
     ensure_dir(processed_dir)
