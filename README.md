@@ -144,7 +144,8 @@ This project provides an automated pipeline for diarizing and transcribing audio
 
 ### Transcription
 
-The `transcription.py` module handles the audio transcription using Whisper. It provides the `transcribe_audio` function that takes an audio chunk, transcribes it, and saves the transcription to a file.
+The `transcription.py` module handles the audio transcription using Whisper or OpenAI API. At the beginning of the program execution, the user is prompted to choose between Whisper and OpenAI API for transcription. The
+`transcribe_audio` or `transcribe_audio_with_openai` function is called based on the user's choice. Either function will take an audio chunk, transcribes it, and saves the transcription to a file.
 
 ### Diarization
 
