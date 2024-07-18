@@ -3,12 +3,13 @@ import torch
 import os
 import logging
 import openai
+from app.utils import ensure_dir, safe_file_operation
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-
+@safe_file_operation
 def transcribe_audio(audio_path, output_dir, openai_api_key):
     """
     Transcribes a single audio chunk using Whisper with GPU if available.
@@ -16,7 +17,7 @@ def transcribe_audio(audio_path, output_dir, openai_api_key):
     Args:
         audio_path (str): Path to the audio chunk.
         output_dir (str): Directory to save the transcription.
-        openai_api_key (str): OpenAI API key.
+        openai_api_key (str): OpenAI API key (not used in this function, but kept for consistency).
 
     Returns:
         str: The transcribed text.
@@ -24,7 +25,7 @@ def transcribe_audio(audio_path, output_dir, openai_api_key):
     try:
         logging.info(f"Starting transcription for {audio_path}")
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        model = whisper.load_model("small", device=device)
+        model = whisper.load_model("base", device=device)
         result = model.transcribe(audio_path)
         full_transcription = result["text"]
 
@@ -33,23 +34,17 @@ def transcribe_audio(audio_path, output_dir, openai_api_key):
             os.path.basename(audio_path).replace(".wav", "_transcription.txt"),
         )
         ensure_dir(output_dir)
-        with open(output_file, "w") as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             f.write(full_transcription)
 
         logging.info(f"Transcription saved for {audio_path} to {output_file}")
         return full_transcription
 
-    except FileNotFoundError as fnf_error:
-        logging.error(f"File not found: {audio_path} - {str(fnf_error)}")
-        raise
-    except whisper.WhisperError as whisper_error:
-        logging.error(f"Whisper model error for {audio_path}: {str(whisper_error)}")
-        raise
     except Exception as e:
         logging.error(f"Error in transcription for {audio_path}: {str(e)}")
         raise
 
-
+@safe_file_operation
 def transcribe_audio_with_openai(audio_path, output_dir, openai_api_key):
     """
     Transcribes an audio file using OpenAI's API.
@@ -79,30 +74,51 @@ def transcribe_audio_with_openai(audio_path, output_dir, openai_api_key):
             os.path.basename(audio_path).replace(".wav", "_transcription.txt"),
         )
         ensure_dir(output_dir)
-        with open(output_file, "w") as f:
+        with open(output_file, "w", encoding="utf-8") as f:
             f.write(full_transcription)
 
         logging.info(f"OpenAI transcription saved for {audio_path} to {output_file}")
         return full_transcription
 
-    except FileNotFoundError as fnf_error:
-        logging.error(f"File not found: {audio_path} - {str(fnf_error)}")
-        raise
-    except openai.OpenAIError as openai_error:
-        logging.error(f"OpenAI API error for {audio_path}: {str(openai_error)}")
-        raise
     except Exception as e:
         logging.error(f"Error in OpenAI transcription for {audio_path}: {str(e)}")
         raise
 
-
-def ensure_dir(directory):
+def transcribe_chunk(chunk_path, output_dir, openai_api_key, use_openai):
     """
-    Ensures the specified directory exists, creating it if necessary.
+    Transcribes a single audio chunk using either local Whisper or OpenAI's API.
 
     Args:
-        directory (str): The path to the directory.
+        chunk_path (str): Path to the audio chunk.
+        output_dir (str): Directory to save the transcription.
+        openai_api_key (str): OpenAI API key.
+        use_openai (bool): Whether to use OpenAI for transcription.
+
+    Returns:
+        str: The transcribed text.
     """
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-        logging.info(f"Created directory {directory}")
+    if use_openai:
+        return transcribe_audio_with_openai(chunk_path, output_dir, openai_api_key)
+    else:
+        return transcribe_audio(chunk_path, output_dir, openai_api_key)
+
+if __name__ == "__main__":
+    # Example usage and testing
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    test_audio_path = "./test/data/test_audio.wav"
+    test_output_dir = "./test/output"
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+
+    try:
+        # Test local Whisper transcription
+        local_transcription = transcribe_chunk(test_audio_path, test_output_dir, openai_api_key, use_openai=False)
+        print("Local Whisper Transcription:", local_transcription)
+
+        # Test OpenAI transcription
+        openai_transcription = transcribe_chunk(test_audio_path, test_output_dir, openai_api_key, use_openai=True)
+        print("OpenAI Transcription:", openai_transcription)
+
+    except Exception as e:
+        logging.error(f"Error during transcription test: {str(e)}")

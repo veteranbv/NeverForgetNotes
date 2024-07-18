@@ -45,3 +45,4 @@ test/data/*
 temp/chunks/*
 temp/transcriptions/*
 temp/wav_files/*
+logs/*

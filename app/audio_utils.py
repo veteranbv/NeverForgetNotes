@@ -1,9 +1,13 @@
+import matplotlib
+
+matplotlib.use("Agg")  # Use non-interactive backend
+import matplotlib.pyplot as plt
 import subprocess
 import wave
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 import logging
+from mutagen.mp4 import MP4
 from app.utils import ensure_dir
 
 logging.basicConfig(
@@ -59,29 +63,21 @@ def get_audio_length(file_path):
         float: The duration of the audio file in seconds.
     """
     try:
-        with wave.open(file_path, "rb") as audio_file:
-            frames = audio_file.getnframes()
-            rate = audio_file.getframerate()
-            duration = frames / float(rate)
-            return duration
-    except wave.Error as e:
+        if file_path.lower().endswith(".m4a"):
+            audio = MP4(file_path)
+            return audio.info.length
+        elif file_path.lower().endswith(".wav"):
+            with wave.open(file_path, "rb") as audio_file:
+                frames = audio_file.getnframes()
+                rate = audio_file.getframerate()
+                duration = frames / float(rate)
+                return duration
+        else:
+            logging.error(f"Unsupported audio format for {file_path}")
+            return 0
+    except Exception as e:
         logging.error(f"Error getting audio length for {file_path}: {str(e)}")
-        raise
-
-
-def save_figure(fig, output_path, filename):
-    """
-    Saves a matplotlib figure to the specified output path.
-
-    Args:
-        fig (matplotlib.figure.Figure): The figure to save.
-        output_path (str): The directory to save the figure.
-        filename (str): The filename for the saved figure.
-    """
-    ensure_dir(output_path)
-    file_path = os.path.join(output_path, filename)
-    fig.savefig(file_path)
-    logging.info(f"Figure saved to {file_path}")
+        return 0
 
 
 def plot_waveform(wav_file, output_path, filename):
@@ -100,16 +96,17 @@ def plot_waveform(wav_file, output_path, filename):
             rate = audio_file.getframerate()
             time = np.linspace(0.0, len(signal) / rate, num=len(signal))
 
-            fig, ax = plt.subplots()
-            ax.plot(time, signal)
-            ax.set_title(f"Waveform of {os.path.basename(wav_file)}")
-            ax.set_xlabel("Time [s]")
-            ax.set_ylabel("Amplitude")
-            save_figure(fig, output_path, filename)
-            plt.close(fig)
-    except wave.Error as e:
-        logging.error(f"Error plotting waveform for {wav_file}: {str(e)}")
-        raise
+        plt.figure(figsize=(10, 4))
+        plt.plot(time, signal)
+        plt.title(f"Waveform of {os.path.basename(wav_file)}")
+        plt.xlabel("Time [s]")
+        plt.ylabel("Amplitude")
+
+        ensure_dir(output_path)
+        file_path = os.path.join(output_path, filename)
+        plt.savefig(file_path)
+        plt.close()
+
+        logging.info(f"Waveform plot saved to {file_path}")
     except Exception as e:
-        logging.error(f"Unexpected error plotting waveform for {wav_file}: {str(e)}")
-        raise
+        logging.error(f"Error plotting waveform for {wav_file}: {str(e)}")
