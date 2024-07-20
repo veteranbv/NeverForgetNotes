@@ -1,118 +1,125 @@
-# Audio to Diarized Transcription Pipeline
+# NeverForgetNotes: Intelligent Meeting Assistant
 
 ![Banner](./img/top.jpeg)
 
-This project provides an automated pipeline for diarizing and transcribing audio recordings, with a focus on Apple Voice Memos (.m4a files). The pipeline utilizes Whisper or OpenAI's API for audio transcription, pyannote.audio for speaker diarization, and GPT-4 or Claude for generating summaries of the merged transcripts. The output includes a merged transcript with speaker labels, timestamps, and a summary.
+NeverForgetNotes is an advanced audio processing and transcription pipeline designed to help you focus on the person across from you in meetings, rather than taking notes. This tool transcribes and analyzes audio recordings or text transcripts, providing diarized transcriptions and AI-generated summaries.
 
 ## Table of Contents
 
+- [Features](#features)
+- [Workflow](#workflow)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Configuration](#configuration)
 - [Project Structure](#project-structure)
 - [Modules](#modules)
-  - [Transcription](#transcription)
-  - [Diarization](#diarization)
-  - [Merging](#merging)
-  - [Splitting](#splitting)
-  - [Summarizing](#summarizing)
-  - [Audio Utils](#audio-utils)
-  - [Utilities](#utilities)
-- [Configuration](#configuration)
 - [Testing](#testing)
 - [Logging](#logging)
 - [Contributing](#contributing)
 - [License](#license)
 - [Meeting Summary Prompt Example](#meeting-summary-prompt-example)
 
+## Features
+
+- Supports various audio formats (M4A, WAV, MP3, etc.) and text transcript inputs
+- Speaker diarization using pyannote.audio
+- Transcription using Whisper (local) or OpenAI's API
+- Flexible summarization options with OpenAI's GPT-4 or Anthropic's Claude
+- Merged transcripts with speaker labels and timestamps
+- Customizable prompts for tailored summaries
+- Waveform visualization for audio files
+- Progress tracking with rich console output
+- Efficient handling of long audio files through chunking
+- Robust error handling and logging
+
+## Workflow
+
+```mermaid
+graph TD
+    A[Input: Audio/Text] --> B{Input Type}
+    B -->|Audio| C[Convert to WAV]
+    B -->|Text| D[Process Transcript]
+    C --> E[Diarization]
+    E --> F[Split Audio]
+    F --> G[Transcription]
+    G --> H[Merge Transcriptions]
+    D --> H
+    H --> I[Summarization]
+    I --> J[Generate Output]
+    J --> K[Waveform Plot]
+    J --> L[Summary]
+    J --> M[Merged Transcript]
+```
+
 ## Installation
 
 1. Clone the repository:
-
-   ```zsh
-   git clone https://github.com/veteranbv/NeverForgetNotes.git
    ```
-
-2. Change to the project directory:
-
-   ```zsh
+   git clone https://github.com/veteranbv/NeverForgetNotes.git
    cd NeverForgetNotes
    ```
 
-3. Create a virtual environment:
-
-   ```zsh
+2. Create and activate a virtual environment:
+   ```
    python -m venv venv
+   source venv/bin/activate  # On Windows use `venv\Scripts\activate`
    ```
 
-4. Activate the virtual environment:
-
-   - For Windows:
-
-     ```zsh
-     venv\Scripts\activate
-     ```
-
-   - For Unix or MacOS:
-
-     ```zsh
-     source venv/bin/activate
-     ```
-
-5. Install the required dependencies:
-
-   ```zsh
+3. Install dependencies:
+   ```
    pip install -r requirements.txt
    ```
 
-6. Set up the necessary environment variables:
-   - Create a `.env` file in the project root.
-   - Add the following variables to the `.env` file:
-
-     ```txt
-     OPENAI_API_KEY=your_openai_api_key
-     HF_AUTH_TOKEN=your_hugging_face_auth_token
-     ANTHROPIC_API_KEY=your_anthropic_api_key
-     OPENAI_MODEL=gpt-4-turbo
-     OPENAI_MODEL_TOKEN_LIMIT=8000
-     ANTHROPIC_MODEL=claude-3-5-sonnet-20240620
-     ANTHROPIC_MODEL_TOKEN_LIMIT=100000
-     ```
-
-   - Replace `your_openai_api_key`, `your_hugging_face_auth_token`, and `your_anthropic_api_key` with your actual API keys.
+4. Set up environment variables:
+   Create a `.env` file in the project root and add:
+   ```
+   HF_AUTH_TOKEN=your_hugging_face_auth_token
+   OPENAI_API_KEY=your_openai_api_key
+   ANTHROPIC_API_KEY=your_anthropic_api_key
+   OPENAI_MODEL=gpt-4-turbo
+   OPENAI_MODEL_TOKEN_LIMIT=8000
+   ANTHROPIC_MODEL=claude-3-5-sonnet-20240620
+   ANTHROPIC_MODEL_TOKEN_LIMIT=100000
+   ```
 
 ## Usage
 
-1. Place your audio files (in `.m4a` format) in the `audio/input` directory.
+1. Place audio files or text transcripts in the `audio/input` directory.
 
 2. Run the main script:
-
-   ```zsh
+   ```
    python main.py
    ```
 
-3. The script will prompt you to choose global settings or individual settings for each file. You'll be asked about:
+3. Follow the interactive prompts to choose settings for:
    - Transcription method (OpenAI API or local Whisper)
    - Summarization model (GPT-4 or Claude)
-   - Prompt selection for summarization
+   - Customized prompts for summarization
    - Custom recording details (optional)
 
-4. The script will process the audio files, perform speaker diarization, transcribe them, generate merged transcripts with speaker labels and timestamps, and create a summary.
+4. The script will process each file, providing progress updates in the console.
 
-5. The output files will be saved in the `output` directory, organized by recording date and name:
-   - `output/<recording_date>-<recording_name>/transcriptions`: Contains the raw transcriptions for each audio file.
-   - `output/<recording_date>-<recording_name>/diarizations`: Contains the diarization output for each audio file.
-   - `output/<recording_date>-<recording_name>/merged_output`: Contains the merged transcripts with speaker labels and timestamps.
-   - `output/<recording_date>-<recording_name>/summary`: Contains the summaries of the merged transcripts.
-   - `output/<recording_date>-<recording_name>/figures`: Contains the waveform figures for each audio file.
+5. Find outputs in the `output` directory, organized by date and recording name:
+   - Transcriptions
+   - Diarization results
+   - Merged outputs (with speaker labels and timestamps)
+   - AI-generated summaries
+   - Waveform plots
 
-6. The processed audio files will be moved to the `audio/processed` directory.
+## Configuration
+
+Adjust settings in the `.env` file or when prompted during execution. You can customize:
+
+- Transcription method (OpenAI API or local Whisper)
+- Summarization model (GPT-4 or Claude)
+- Prompts for summarization (stored in `prompts/library/`)
+- Custom recording details (date and name)
+- Token limits for AI models
 
 ## Project Structure
 
 ```
 NeverForgetNotes/
-├── LICENSE
-├── README.md
 ├── app/
 │   ├── audio_processing.py
 │   ├── audio_utils.py
@@ -127,84 +134,62 @@ NeverForgetNotes/
 │   ├── not_processed/
 │   └── processed/
 ├── img/
-│   └── top.jpeg
-├── main.py
+├── logs/
 ├── output/
 ├── prompts/
-│   ├── library/
-│   └── prompt.txt
-├── requirements.txt
+│   └── library/
 ├── temp/
-│   ├── chunks/
-│   ├── transcriptions/
-│   └── wav_files/
-└── test/
-    ├── create_testdata.py
-    └── data/
+├── test/
+│   ├── data/
+│   └── create_testdata.py
+├── .env
+├── .gitignore
+├── LICENSE
+├── main.py
+├── README.md
+└── requirements.txt
 ```
 
 ## Modules
 
-### Transcription
-
-The `transcription.py` module handles audio transcription using either Whisper or OpenAI's API. It provides functions for transcribing audio chunks and saving the transcriptions to files.
-
-### Diarization
-
-The `diarization.py` module performs speaker diarization using pyannote.audio. It provides the `diarize_audio` function that takes an audio file, performs diarization, and saves the diarization output to a file.
-
-### Merging
-
-The `merge.py` module handles the merging of transcriptions and diarization outputs. It provides two main functions:
-
-- `merge_transcriptions`: Merges the transcriptions from speaker-specific chunks based on the diarization output.
-- `merge_raw_transcriptions`: Merges the raw transcriptions from the temporary directory into a single file.
-
-### Splitting
-
-The `split.py` module handles the splitting of audio files into speaker-specific chunks based on the diarization output. It provides the `split_audio_by_diarization` function that takes an audio file and diarization output, splits the audio into chunks, and saves the chunks to files.
-
-### Summarizing
-
-The `summarize.py` module handles the generation of summaries for the merged transcripts using either GPT-4 or Claude. It provides the `summarize_transcript` function that takes the merged transcript, a prompt file, and the appropriate API key, and returns the generated summary.
-
-### Audio Utils
-
-The `audio_utils.py` module provides utility functions for audio processing, including converting audio formats, getting audio length, and plotting waveforms.
-
-### Utilities
-
-The `utils.py` module provides various utility functions for directory creation, file handling, formatting, and other common operations used throughout the project.
-
-## Configuration
-
-The project uses environment variables for configuration. The following variables need to be set in the `.env` file:
-
-- `OPENAI_API_KEY`: Your OpenAI API key for using GPT-4.
-- `HF_AUTH_TOKEN`: Your Hugging Face authentication token for using pyannote.audio.
-- `ANTHROPIC_API_KEY`: Your Anthropic API key for using Claude.
-- `OPENAI_MODEL`: The OpenAI model to use for summarization (e.g., "gpt-4-turbo").
-- `OPENAI_MODEL_TOKEN_LIMIT`: The token limit for the OpenAI model.
-- `ANTHROPIC_MODEL`: The Anthropic model to use for summarization (e.g., "claude-3-5-sonnet-20240620").
-- `ANTHROPIC_MODEL_TOKEN_LIMIT`: The token limit for the Anthropic model.
+- `main.py`: Entry point, handles user interaction and orchestrates the processing pipeline
+- `app/audio_processing.py`: Main processing pipeline for audio files and transcripts
+- `app/audio_utils.py`: Audio file utilities (conversion, length calculation, waveform plotting)
+- `app/diarization.py`: Speaker diarization using pyannote.audio
+- `app/merge.py`: Merging transcriptions and diarization outputs
+- `app/split.py`: Splitting audio by speaker segments
+- `app/summarize.py`: Generating summaries using OpenAI or Anthropic models
+- `app/transcription.py`: Audio transcription using Whisper or OpenAI's API
+- `app/utils.py`: General utility functions (file operations, text processing, error handling)
 
 ## Testing
 
-The `test/` directory contains test data and scripts for validating the functionality of the pipeline. You can use the `create_testdata.py` script to generate test audio files from your input files.
-
-To run tests, you can execute individual module scripts (e.g., `python -m app.transcription`) or create dedicated test scripts for more comprehensive testing.
+- Use the `test/create_testdata.py` script to generate shortened test audio files from your input data.
+- Each module in the `app/` directory contains a `__main__` block for individual component testing.
+- Run individual module scripts with sample data to test specific functionalities.
 
 ## Logging
 
-The project uses Python's built-in `logging` module for logging information and errors. Log messages are formatted with timestamps and saved to rotating log files in the `logs/` directory. You can adjust the logging level and configuration in the `setup_logging` function in `main.py`.
+- Logs are saved in the `logs/` directory.
+- The application uses Python's `logging` module for comprehensive logging.
+- Log files are automatically rotated and old logs are cleaned up to manage storage.
+- Adjust logging settings in `main.py` if needed.
 
 ## Contributing
 
-Contributions to this project are welcome. If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the project's GitHub repository.
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a new branch for your feature or bug fix
+3. Make your changes and commit them with clear, descriptive messages
+4. Push your changes to your fork
+5. Submit a pull request to the main repository
+
+Please open an issue first for major changes or new features to discuss the proposed changes.
 
 ## License
 
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE). See the LICENSE file for details.
 
 ## Meeting Summary Prompt Example
 
