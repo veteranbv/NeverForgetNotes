@@ -9,7 +9,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-
 @safe_file_operation
 def load_prompt(prompt_file):
     """
@@ -22,7 +21,6 @@ def load_prompt(prompt_file):
         str: The prompt template.
     """
     return read_file(prompt_file)
-
 
 def count_tokens(text, model):
     """
@@ -41,7 +39,6 @@ def count_tokens(text, model):
     except Exception as e:
         logging.warning(f"Error counting tokens: {str(e)}. Using fallback estimation.")
         return len(text.split()) * 1.3  # Fallback estimation
-
 
 def summarize_with_openai(prompt, api_key, model):
     """
@@ -68,7 +65,6 @@ def summarize_with_openai(prompt, api_key, model):
     except Exception as e:
         logging.error(f"Error in OpenAI summarization: {str(e)}")
         raise
-
 
 def summarize_with_anthropic(prompt, api_key, model, max_tokens=8192):
     """
@@ -102,7 +98,6 @@ def summarize_with_anthropic(prompt, api_key, model, max_tokens=8192):
         logging.error(f"Error in Anthropic summarization: {str(e)}")
         raise
 
-
 def summarize_transcript(
     transcript, prompt_file, api_key, model, token_limit, is_final_summary=False
 ):
@@ -121,6 +116,9 @@ def summarize_transcript(
         str: The summary of the transcript.
     """
     try:
+        if not model:
+            raise ValueError("Summarization model is not set.")
+
         prompt_template = load_prompt(prompt_file)
         chunk_limit = token_limit - 1000  # Leave room for the prompt
         chunks = chunk_text(transcript, chunk_limit)
@@ -157,9 +155,8 @@ def summarize_transcript(
         logging.error(f"Error in summarization: {str(e)}")
         raise
 
-
 if __name__ == "__main__":
-    # Example usage
+    # Example usage and testing
     from dotenv import load_dotenv
 
     load_dotenv()

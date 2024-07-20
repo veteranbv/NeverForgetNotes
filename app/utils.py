@@ -5,7 +5,9 @@ from datetime import datetime, timedelta
 import subprocess
 import logging
 from slugify import slugify
+import shutil
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def ensure_dir(directory):
     """
@@ -17,7 +19,6 @@ def ensure_dir(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
         logging.info(f"Created directory: {directory}")
-
 
 def cleanup_old_logs(logs_dir, max_age_days=30):
     """
@@ -35,7 +36,6 @@ def cleanup_old_logs(logs_dir, max_age_days=30):
             if file_age > max_age_days * 86400:  # 86400 seconds in a day
                 os.remove(file_path)
                 logging.info(f"Removed old log file: {filename}")
-
 
 def format_seconds(seconds):
     """
@@ -108,51 +108,6 @@ def sanitize_filename(name, max_length=242):
         root = root[:max_root_length]
     return f"{root}{ext}"
 
-
-def prompt_for_recording_details(default_date, default_name, filename):
-    """
-    Prompts the user for custom recording details, with defaults provided.
-
-    Args:
-        default_date (str): The default recording date.
-        default_name (str): The default recording name.
-        filename (str): The name of the audio file.
-
-    Returns:
-        tuple: The recording date, sanitized name, and OpenAI usage flag.
-    """
-    use_custom_details = (
-        input(
-            f"Do you want to provide custom recording details for {filename}? (y/n): "
-        )
-        .strip()
-        .lower()
-        == "y"
-    )
-
-    if use_custom_details:
-        recording_date = input("Enter the recording date (YYYY-MM-DD): ")
-        recording_name = input("Enter the name for the recording: ")
-        try:
-            normalized_date = datetime.strptime(recording_date, "%Y-%m-%d").strftime(
-                "%Y-%m-%d"
-            )
-        except ValueError:
-            logging.error("Invalid date format. Using the default date.")
-            normalized_date = default_date
-    else:
-        normalized_date = default_date
-        recording_name = default_name
-
-    sanitized_name = sanitize_filename(recording_name)
-    use_openai = (
-        input("Would you like to use OpenAI for transcription? (y/n): ").strip().lower()
-        == "y"
-    )
-
-    return normalized_date, sanitized_name, use_openai
-
-
 def list_available_prompts(prompts_dir):
     """
     Lists all available prompt files in the specified directory.
@@ -168,7 +123,6 @@ def list_available_prompts(prompts_dir):
         for file in os.listdir(prompts_dir)
         if file.endswith(".txt")
     ]
-
 
 def select_prompt(prompts):
     """
@@ -192,7 +146,6 @@ def select_prompt(prompts):
             print("Invalid selection. Please try again.")
         except ValueError:
             print("Invalid input. Please enter a number.")
-
 
 def create_output_dirs(base_output_dir, normalized_date, recording_name):
     """
@@ -222,7 +175,6 @@ def create_output_dirs(base_output_dir, normalized_date, recording_name):
         ensure_dir(directory)
     return dirs
 
-
 def get_audio_metadata(file_path):
     """
     Retrieves the recording date from the audio file's metadata using ffprobe.
@@ -237,12 +189,9 @@ def get_audio_metadata(file_path):
         result = subprocess.run(
             [
                 "ffprobe",
-                "-v",
-                "error",
-                "-show_entries",
-                "format_tags=creation_time",
-                "-of",
-                "default=nw=1:nk=1",
+                "-v", "error",
+                "-show_entries", "format_tags=creation_time",
+                "-of", "default=nw=1:nk=1",
                 file_path,
             ],
             capture_output=True,
@@ -253,44 +202,15 @@ def get_audio_metadata(file_path):
         if date:
             return datetime.strptime(date, "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d")
     except (subprocess.CalledProcessError, ValueError) as e:
-        logging.warning(
-            f"Error retrieving metadata for {file_path}: {str(e)}. Trying file system dates."
-        )
+        logging.warning(f"Error retrieving metadata for {file_path}: {str(e)}. Trying file system dates.")
 
     try:
         stat = os.stat(file_path)
-        creation_time = (
-            stat.st_birthtime if hasattr(stat, "st_birthtime") else stat.st_mtime
-        )
+        creation_time = stat.st_birthtime if hasattr(stat, "st_birthtime") else stat.st_mtime
         return datetime.fromtimestamp(creation_time).strftime("%Y-%m-%d")
     except Exception as e:
-        logging.warning(
-            f"Error retrieving file system date for {file_path}: {str(e)}. Using current date."
-        )
+        logging.warning(f"Error retrieving file system date for {file_path}: {str(e)}. Using current date.")
         return datetime.now().strftime("%Y-%m-%d")
-
-
-def prompt_for_summarization_model(openai_model, anthropic_model):
-    """
-    Prompts the user to choose a summarization model.
-
-    Args:
-        openai_model (str): The name of the OpenAI model.
-        anthropic_model (str): The name of the Anthropic model.
-
-    Returns:
-        str: The chosen summarization model.
-    """
-    while True:
-        choice = input(
-            f"Choose summarization model (1 for {openai_model}, 2 for {anthropic_model}): "
-        ).strip()
-        if choice == "1":
-            return openai_model
-        elif choice == "2":
-            return anthropic_model
-        print("Invalid choice. Please enter 1 or 2.")
-
 
 def is_audio_file(file_path):
     """
@@ -305,7 +225,6 @@ def is_audio_file(file_path):
     audio_extensions = {".mp3", ".wav", ".m4a", ".flac", ".ogg", ".aac"}
     return os.path.splitext(file_path)[1].lower() in audio_extensions
 
-
 def is_transcript_file(file_path):
     """
     Checks if the given file is a transcript file (.txt or .vtt).
@@ -317,7 +236,6 @@ def is_transcript_file(file_path):
         bool: True if the file is a transcript, False otherwise.
     """
     return file_path.lower().endswith((".txt", ".vtt"))
-
 
 def list_directory_contents(directory):
     """
@@ -333,7 +251,6 @@ def list_directory_contents(directory):
         for name in dirs:
             logging.info(f"  - {os.path.join(root, name)}/")
 
-
 def estimate_tokens(text, model="gpt-4"):
     """
     Estimates the number of tokens in the given text.
@@ -346,8 +263,7 @@ def estimate_tokens(text, model="gpt-4"):
         int: Estimated number of tokens.
     """
     # This is a very rough estimate. For more accurate results, consider using tiktoken library.
-    return len(text.split()) * 1.3
-
+    return int(len(text.split()) * 1.3)
 
 def chunk_text(text, max_tokens):
     """
@@ -379,7 +295,6 @@ def chunk_text(text, max_tokens):
 
     return chunks
 
-
 def safe_file_operation(func):
     """
     Decorator to ensure safe file operations with proper error handling.
@@ -390,7 +305,6 @@ def safe_file_operation(func):
     Returns:
         function: The wrapped function with error handling.
     """
-
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
@@ -400,9 +314,7 @@ def safe_file_operation(func):
         except Exception as e:
             logging.error(f"Unexpected error during file operation: {str(e)}")
             raise
-
     return wrapper
-
 
 @safe_file_operation
 def read_file(file_path):
@@ -415,9 +327,8 @@ def read_file(file_path):
     Returns:
         str: Content of the file.
     """
-    with open(file_path, "r") as file:
+    with open(file_path, "r", encoding="utf-8") as file:
         return file.read()
-
 
 @safe_file_operation
 def write_file(file_path, content):
@@ -428,9 +339,8 @@ def write_file(file_path, content):
         file_path (str): Path to the file to write.
         content (str): Content to write to the file.
     """
-    with open(file_path, "w") as file:
+    with open(file_path, "w", encoding="utf-8") as file:
         file.write(content)
-
 
 def validate_environment_variables(required_vars):
     """
@@ -444,8 +354,26 @@ def validate_environment_variables(required_vars):
     """
     missing_vars = [var for var in required_vars if not os.getenv(var)]
     if missing_vars:
-        logging.error(
-            f"The following required environment variables are not set: {', '.join(missing_vars)}"
-        )
+        logging.error(f"The following required environment variables are not set: {', '.join(missing_vars)}")
         return False
     return True
+
+if __name__ == "__main__":
+    # Example usage and testing
+    test_dir = "./test_utils"
+    ensure_dir(test_dir)
+
+    # Test sanitize_filename
+    print(sanitize_filename("Test File Name! @#$%.txt"))
+
+    # Test format_time
+    print(format_time(3661))  # Should print "1h 1m 1s"
+
+    # Test get_file_size
+    test_file_path = os.path.join(test_dir, "test_file.txt")
+    with open(test_file_path, "w") as f:
+        f.write("Test content" * 1000)
+    print(f"File size: {get_file_size(test_file_path):.2f} MB")
+
+    # Clean up
+    shutil.rmtree(test_dir)

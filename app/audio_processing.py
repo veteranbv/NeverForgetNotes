@@ -64,14 +64,14 @@ def process_audio_file(
 
     try:
         # Convert to WAV
-        progress.update(file_task, description="Converting to WAV", advance=10)
+        progress.update(file_task, description="Converting to WAV", completed=10)
         logging.info(f"Converting {file_path} to WAV...")
         convert_to_wav(file_path, wav_file)
         convert_time = time.time() - step_start_time
         logging.info(f"Conversion time: {format_seconds(convert_time)}")
 
         # Diarization
-        progress.update(file_task, description="Diarizing audio", advance=20)
+        progress.update(file_task, description="Diarizing audio", completed=30)
         logging.info(f"Starting diarization for {wav_file}...")
         step_start_time = time.time()
         diarization = diarize_audio(
@@ -84,7 +84,7 @@ def process_audio_file(
             raise ValueError(f"Diarization failed for {file_path}")
 
         # Split Audio by Diarization
-        progress.update(file_task, description="Splitting audio", advance=10)
+        progress.update(file_task, description="Splitting audio", completed=40)
         logging.info(f"Splitting audio for {wav_file}...")
         step_start_time = time.time()
         chunk_files = split_audio_by_diarization(
@@ -100,7 +100,7 @@ def process_audio_file(
         list_directory_contents(output_dirs["temp_chunks"])
 
         # Transcription
-        progress.update(file_task, description="Transcribing audio", advance=20)
+        progress.update(file_task, description="Transcribing audio", completed=60)
         logging.info(f"Starting transcription for {len(chunk_files)} chunks...")
         step_start_time = time.time()
         transcriptions = []
@@ -133,7 +133,7 @@ def process_audio_file(
             )
 
         # Merge Transcriptions
-        progress.update(file_task, description="Merging transcriptions", advance=10)
+        progress.update(file_task, description="Merging transcriptions", completed=80)
         logging.info("Merging transcriptions...")
         step_start_time = time.time()
         raw_merged_transcript = merge_raw_transcriptions(
@@ -152,7 +152,7 @@ def process_audio_file(
         logging.info(f"Merge time: {format_seconds(merge_time)}")
 
         # Generate and save a waveform plot
-        progress.update(file_task, description="Generating waveform plot", advance=10)
+        progress.update(file_task, description="Generating waveform plot", completed=90)
         try:
             logging.info("Generating waveform plot...")
             step_start_time = time.time()
@@ -166,7 +166,7 @@ def process_audio_file(
             logging.error(f"Error generating waveform plot: {str(e)}")
 
         logging.info(f"Finished processing {file_path}")
-        progress.update(file_task, advance=20)
+        progress.update(file_task, completed=100)
         return merged_output
 
     except Exception as e:
@@ -203,7 +203,7 @@ def process_transcript_file(file_path, output_dirs, progress, file_task):
     step_start_time = time.time()
 
     try:
-        progress.update(file_task, description="Processing transcript", advance=50)
+        progress.update(file_task, description="Processing transcript", completed=50)
         transcript = read_file(file_path)
         output_file = os.path.join(
             output_dirs["merged_output"], os.path.basename(file_path)
@@ -213,7 +213,7 @@ def process_transcript_file(file_path, output_dirs, progress, file_task):
         process_time = time.time() - step_start_time
         logging.info(f"Transcript processing time: {format_seconds(process_time)}")
         logging.info(f"Copied transcript file to {output_file}")
-        progress.update(file_task, advance=50)
+        progress.update(file_task, completed=100)
         return transcript
 
     except Exception as e:
@@ -246,7 +246,25 @@ def process_files(
     Processes audio files and transcript files.
 
     Args:
-        ... [previous arguments remain the same] ...
+        input_dir (str): Directory containing input files.
+        processed_dir (str): Directory to move processed files.
+        base_output_dir (str): Base directory for output files.
+        hf_auth_token (str): HuggingFace authentication token.
+        openai_api_key (str): OpenAI API key.
+        anthropic_api_key (str): Anthropic API key.
+        summary_prompt_file (str): Path to the summary prompt file.
+        summarization_model (str): Model to use for summarization.
+        audio_files (list): List of audio files to process.
+        transcript_files (list): List of transcript files to process.
+        openai_model (str): OpenAI model name.
+        anthropic_model (str): Anthropic model name.
+        openai_token_limit (int): Token limit for OpenAI model.
+        anthropic_token_limit (int): Token limit for Anthropic model.
+        use_openai (bool): Whether to use OpenAI for transcription.
+        recording_date (str): Custom recording date.
+        recording_name (str): Custom recording name.
+        progress (rich.progress.Progress): Progress bar object.
+        file_task (int): Task ID for the file being processed.
 
     Returns:
         float: The total processing time for all files in seconds.

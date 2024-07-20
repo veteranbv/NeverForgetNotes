@@ -24,7 +24,6 @@ from rich.prompt import Confirm, Prompt
 
 console = Console()
 
-
 def setup_logging():
     """
     Set up logging configuration for the application.
@@ -50,7 +49,6 @@ def setup_logging():
     # Add only the file handler
     root_logger.addHandler(file_handler)
 
-
 def prompt_for_file_settings(
     filename, available_prompts, openai_model, anthropic_model
 ):
@@ -58,11 +56,11 @@ def prompt_for_file_settings(
     Prompt the user for settings for a specific file.
     """
     console.print(f"\n[bold blue]Settings for file: {filename}[/bold blue]")
+    
+    # 1. Transcription method
     use_openai = Confirm.ask("Would you like to use OpenAI for transcription?")
 
-    prompt = select_prompt(available_prompts)
-
-    # Use the original input method for summarization model choice
+    # 2. Summarization model
     print("Choose summarization model:")
     print(f"1) {openai_model}")
     print(f"2) {anthropic_model}")
@@ -73,6 +71,10 @@ def prompt_for_file_settings(
             break
         print("Invalid choice. Please enter 1 or 2.")
 
+    # 3. Prompt selection
+    prompt = select_prompt(available_prompts)
+
+    # 4. Custom recording details
     use_custom_details = Confirm.ask("Do you want to provide custom recording details?")
     if use_custom_details:
         recording_date = Prompt.ask("Enter the recording date (YYYY-MM-DD)")
@@ -81,38 +83,28 @@ def prompt_for_file_settings(
         recording_date = None
         recording_name = None
 
-    return use_openai, prompt, summarization_model, recording_date, recording_name
+    return use_openai, summarization_model, prompt, recording_date, recording_name
 
-
-def prompt_for_global_settings():
+def prompt_for_global_settings(available_prompts):
     """
     Prompt the user for global settings to apply to all files.
     """
-    use_openai = (
-        input("Would you like to use OpenAI for transcription? (y/n): ").strip().lower()
-        == "y"
-    )
+    # 1. Transcription method
+    use_openai = Confirm.ask("Would you like to use OpenAI for transcription?")
 
+    # 2. Summarization model
     openai_model = os.getenv("OPENAI_MODEL")
     anthropic_model = os.getenv("ANTHROPIC_MODEL")
-
     summarization_model_choice = get_user_choice(
         "Choose summarization model:", [openai_model, anthropic_model]
     )
+    summarization_model = openai_model if summarization_model_choice == 1 else anthropic_model
 
-    summarization_model = (
-        openai_model if summarization_model_choice == 1 else anthropic_model
-    )
+    # 3. Prompt selection
+    use_different_prompts = Confirm.ask("Do you want to choose different prompts for each input file?")
+    global_prompt = None if use_different_prompts else select_prompt(available_prompts)
 
-    use_different_prompts = (
-        input("Do you want to choose different prompts for each input file? (y/n): ")
-        .strip()
-        .lower()
-        == "y"
-    )
-
-    return use_openai, summarization_model, use_different_prompts
-
+    return use_openai, summarization_model, use_different_prompts, global_prompt
 
 def get_user_choice(prompt, options):
     """
@@ -127,7 +119,6 @@ def get_user_choice(prompt, options):
             return int(choice)
         print("Invalid choice. Please enter 1 or 2.")
 
-
 def cleanup_temp_directories():
     """
     Clean up temporary directories created during processing.
@@ -136,7 +127,6 @@ def cleanup_temp_directories():
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
         logging.info(f"Cleaned up temporary directory: {temp_dir}")
-
 
 def main():
     """
@@ -220,27 +210,14 @@ def main():
     )
 
     # Prompt for global settings
-    use_global_settings = (
-        input(
-            "Do you want to have the same settings for all of the input files? (y/n): "
-        )
-        .strip()
-        .lower()
-        == "y"
-    )
+    use_global_settings = Confirm.ask("Do you want to have the same settings for all of the input files?")
 
     if use_global_settings:
-        (
-            global_use_openai,
-            global_summarization_model,
-            global_use_different_prompts,
-        ) = prompt_for_global_settings()
+        global_use_openai, global_summarization_model, global_use_different_prompts, global_prompt = prompt_for_global_settings(available_prompts)
         console.print(
             f"Chosen summarization model: {global_summarization_model}",
             style="bold green",
         )
-        if not global_use_different_prompts:
-            global_prompt = select_prompt(available_prompts)
     else:
         global_use_openai = None
         global_summarization_model = None
@@ -255,18 +232,16 @@ def main():
                 {
                     "filename": filename,
                     "use_openai": global_use_openai,
-                    "prompt": global_prompt
-                    if not global_use_different_prompts
-                    else select_prompt(available_prompts),
+                    "summarization_model": global_summarization_model,
+                    "prompt": global_prompt if not global_use_different_prompts else select_prompt(available_prompts),
                     "recording_date": None,
                     "recording_name": None,
                     "length": get_audio_length(os.path.join(input_dir, filename)),
                     "size": get_file_size(os.path.join(input_dir, filename)),
-                    "summarization_model": global_summarization_model,
                 }
             )
         else:
-            settings = prompt_for_file_settings(
+            use_openai, summarization_model, prompt, recording_date, recording_name = prompt_for_file_settings(
                 filename,
                 available_prompts,
                 os.getenv("OPENAI_MODEL"),
@@ -275,11 +250,11 @@ def main():
             file_settings.append(
                 {
                     "filename": filename,
-                    "use_openai": settings[0],
-                    "prompt": settings[1],
-                    "summarization_model": settings[2],
-                    "recording_date": settings[3],
-                    "recording_name": settings[4],
+                    "use_openai": use_openai,
+                    "summarization_model": summarization_model,
+                    "prompt": prompt,
+                    "recording_date": recording_date,
+                    "recording_name": recording_name,
                     "length": get_audio_length(os.path.join(input_dir, filename)),
                     "size": get_file_size(os.path.join(input_dir, filename)),
                 }
@@ -338,7 +313,7 @@ def main():
                     os.getenv("OPENAI_API_KEY"),
                     os.getenv("ANTHROPIC_API_KEY"),
                     settings["prompt"],
-                    global_summarization_model,
+                    settings["summarization_model"],
                     [settings["filename"]]
                     if is_audio_file(settings["filename"])
                     else [],
@@ -376,7 +351,6 @@ def main():
     # Display summary information
     console.print(f"Total files processed successfully: {successfully_processed_files}")
     console.print(f"Total processing time: {format_time(total_processing_time)}")
-
 
 if __name__ == "__main__":
     main()

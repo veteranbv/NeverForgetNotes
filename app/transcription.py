@@ -59,7 +59,6 @@ def transcribe_audio_with_openai(audio_path, output_dir, openai_api_key):
     """
     try:
         logging.info(f"Starting OpenAI transcription for {audio_path}")
-        openai.api_key = openai_api_key
         client = openai.OpenAI(api_key=openai_api_key)
 
         with open(audio_path, "rb") as audio_file:

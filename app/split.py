@@ -1,13 +1,13 @@
 from pydub import AudioSegment
 import os
 import logging
-from app.utils import ensure_dir
+from app.utils import ensure_dir, safe_file_operation
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-
+@safe_file_operation
 def split_audio_by_diarization(audio_path, diarization, output_dir):
     """
     Splits the audio into chunks based on the diarization output.
@@ -25,6 +25,8 @@ def split_audio_by_diarization(audio_path, diarization, output_dir):
     chunk_files = []
     min_chunk_duration_ms = 100  # Minimum duration for chunks in milliseconds
 
+    logging.info(f"Starting to split audio file: {audio_path}")
+    
     for i, (segment, _, speaker) in enumerate(diarization.itertracks(yield_label=True)):
         start = int(segment.start * 1000)  # milliseconds
         end = int(segment.end * 1000)  # milliseconds
@@ -46,3 +48,46 @@ def split_audio_by_diarization(audio_path, diarization, output_dir):
 
     logging.info(f"Total number of chunks created: {len(chunk_files)}")
     return chunk_files
+
+if __name__ == "__main__":
+    # Example usage and testing
+    from pyannote.core import Annotation, Segment
+    import numpy as np
+    from scipy.io import wavfile
+    
+    # Create a mock audio file
+    def create_mock_audio(path, duration=10, sample_rate=16000):
+        t = np.linspace(0, duration, duration * sample_rate, False)
+        audio = np.sin(2*np.pi*440*t) * 0.3  # 440 Hz sine wave
+        wavfile.write(path, sample_rate, (audio * 32767).astype(np.int16))
+    
+    # Mock data for testing
+    mock_audio_path = "./test/data/test_audio.wav"
+    mock_output_dir = "./test/output/chunks"
+    
+    # Ensure test directories exist
+    ensure_dir(os.path.dirname(mock_audio_path))
+    ensure_dir(mock_output_dir)
+    
+    # Create a mock audio file
+    create_mock_audio(mock_audio_path)
+    
+    # Create a mock diarization annotation
+    mock_diarization = Annotation()
+    mock_diarization[Segment(0, 3)] = "SPEAKER_1"
+    mock_diarization[Segment(3, 6)] = "SPEAKER_2"
+    mock_diarization[Segment(6, 10)] = "SPEAKER_1"
+
+    try:
+        # Test split_audio_by_diarization
+        chunk_files = split_audio_by_diarization(
+            mock_audio_path,
+            mock_diarization,
+            mock_output_dir
+        )
+        print(f"Created {len(chunk_files)} audio chunks:")
+        for chunk in chunk_files:
+            print(f"  - {chunk}")
+
+    except Exception as e:
+        logging.error(f"Error during audio splitting test: {str(e)}")
