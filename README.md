@@ -7,7 +7,9 @@ NeverForgetNotes is an advanced audio processing and transcription pipeline desi
 ## Table of Contents
 
 - [Features](#features)
-- [Workflow](#workflow)
+- [System Architecture and Workflow](#system-architecture-and-workflow)
+  - [High-Level Overview](#high-level-overview)
+  - [Detailed Architecture](#detailed-architecture)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Configuration](#configuration)
@@ -32,7 +34,11 @@ NeverForgetNotes is an advanced audio processing and transcription pipeline desi
 - Efficient handling of long audio files through chunking
 - Robust error handling and logging
 
-## Workflow
+## System Architecture and Workflow
+
+### High-Level Overview
+
+The following diagram provides a simplified view of the NeverForgetNotes workflow:
 
 ```mermaid
 graph TD
@@ -51,28 +57,107 @@ graph TD
     J --> M[Merged Transcript]
 ```
 
+This overview shows the basic flow from input to output, highlighting the main processing steps.
+
+### Detailed Architecture
+
+For a more comprehensive understanding of the system, including input/output processes, memory management, and AI models used, refer to the detailed diagram below:
+
+```mermaid
+graph TD
+    A[Input] -->|Audio Files| B[Audio Processing]
+    A -->|Text Transcripts| C[Text Processing]
+    
+    subgraph "Audio Processing"
+    B -->|Convert to WAV| D[WAV Conversion]
+    D --> E[Diarization]
+    E -->|pyannote.audio| F[Speaker Segmentation]
+    F --> G[Audio Splitting]
+    G --> H[Transcription]
+    H -->|Whisper Model| I[Local Transcription]
+    H -->|OpenAI API| J[Cloud Transcription]
+    end
+    
+    subgraph "Text Processing"
+    C --> K[Text Parsing]
+    end
+    
+    I --> L[Merge Transcriptions]
+    J --> L
+    K --> L
+    
+    L --> M[Summarization]
+    M -->|OpenAI GPT-4| N[GPT-4 Summary]
+    M -->|Anthropic Claude| O[Claude Summary]
+    
+    subgraph "Memory Management"
+    P[Temp Directory] -->|Store| Q[Audio Chunks]
+    P -->|Store| R[Intermediate Transcripts]
+    S[Output Directory] -->|Store| T[Final Transcripts]
+    S -->|Store| U[Summaries]
+    S -->|Store| V[Waveform Plots]
+    end
+    
+    subgraph "Configuration"
+    W[Environment Variables] --> X[API Keys]
+    W --> Y[Model Selection]
+    W --> Z[Token Limits]
+    end
+    
+    AA[Main Script] --> AB[User Interface]
+    AB -->|Input| AC[Process Selection]
+    AC --> B
+    AC --> C
+    
+    AD[Logging] --> AE[Log Files]
+    
+    AF[Error Handling] --> AG[Exception Management]
+    
+    N --> S
+    O --> S
+    L --> S
+    
+    classDef inputOutput fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef processing fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef model fill:#bfb,stroke:#333,stroke-width:2px;
+    classDef storage fill:#fbb,stroke:#333,stroke-width:2px;
+    classDef config fill:#ffb,stroke:#333,stroke-width:2px;
+    
+    class A,S inputOutput;
+    class B,C,D,E,F,G,H,L,M processing;
+    class I,J,N,O model;
+    class P,Q,R,T,U,V storage;
+    class W,X,Y,Z config;
+```
+
+This detailed architecture illustrates how NeverForgetNotes processes both audio and text inputs, performs diarization and transcription, and generates summaries using advanced AI models, all while efficiently managing system resources.
+
 ## Installation
 
 1. Clone the repository:
-   ```
+
+   ```bash
    git clone https://github.com/veteranbv/NeverForgetNotes.git
    cd NeverForgetNotes
    ```
 
 2. Create and activate a virtual environment:
-   ```
+
+   ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows use `venv\Scripts\activate`
    ```
 
 3. Install dependencies:
-   ```
+
+   ```bash
    pip install -r requirements.txt
    ```
 
 4. Set up environment variables:
    Create a `.env` file in the project root and add:
-   ```
+
+   ```bash
    HF_AUTH_TOKEN=your_hugging_face_auth_token
    OPENAI_API_KEY=your_openai_api_key
    ANTHROPIC_API_KEY=your_anthropic_api_key
@@ -87,7 +172,8 @@ graph TD
 1. Place audio files or text transcripts in the `audio/input` directory.
 
 2. Run the main script:
-   ```
+
+   ```bash
    python main.py
    ```
 
@@ -118,7 +204,7 @@ Adjust settings in the `.env` file or when prompted during execution. You can cu
 
 ## Project Structure
 
-```
+```bash
 NeverForgetNotes/
 ├── app/
 │   ├── audio_processing.py
