@@ -4,7 +4,7 @@
 
 NeverForgetNotes is an advanced audio processing and transcription pipeline designed to help you focus on the person across from you in meetings, rather than taking notes. This tool transcribes and analyzes audio recordings or text transcripts, providing diarized transcriptions and AI-generated summaries.
 
-![NeverForgetNotes Demo](demo.gif)
+![NeverForgetNotes Demo](./img/demo.gif)
 
 ## Table of Contents
 
