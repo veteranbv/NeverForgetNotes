@@ -15,6 +15,7 @@ NeverForgetNotes is an advanced audio processing and transcription pipeline desi
 - [Configuration](#configuration)
 - [Project Structure](#project-structure)
 - [Modules](#modules)
+   - [Visualizing Modules](#visualizing-modules)
 - [Testing](#testing)
 - [Logging](#logging)
 - [Contributing](#contributing)
@@ -64,70 +65,68 @@ This overview shows the basic flow from input to output, highlighting the main p
 For a more comprehensive understanding of the system, including input/output processes, memory management, and AI models used, refer to the detailed diagram below:
 
 ```mermaid
-graph TD
-    A[Input] -->|Audio Files| B[Audio Processing]
-    A -->|Text Transcripts| C[Text Processing]
+flowchart TD
+    Input[("Input Files\n(Audio/Transcripts)")]
+    Output[("Output Files")]
     
-    subgraph "Audio Processing"
-    B -->|Convert to WAV| D[WAV Conversion]
-    D --> E[Diarization]
-    E -->|pyannote.audio| F[Speaker Segmentation]
-    F --> G[Audio Splitting]
-    G --> H[Transcription]
-    H -->|Whisper Model| I[Local Transcription]
-    H -->|OpenAI API| J[Cloud Transcription]
+    subgraph Audio Processing
+        Convert["Convert to WAV"]
+        Diarize["Speaker Diarization\n(pyannote.audio)"]
+        Split["Split Audio\nby Speaker"]
     end
     
-    subgraph "Text Processing"
-    C --> K[Text Parsing]
+    subgraph Transcription
+        TranscribeChoice{"Transcription\nMethod"}
+        TranscribeWhisper["Local Whisper\nTranscription"]
+        TranscribeOpenAI["OpenAI API\nTranscription"]
     end
     
-    I --> L[Merge Transcriptions]
-    J --> L
-    K --> L
-    
-    L --> M[Summarization]
-    M -->|OpenAI GPT-4| N[GPT-4 Summary]
-    M -->|Anthropic Claude| O[Claude Summary]
-    
-    subgraph "Memory Management"
-    P[Temp Directory] -->|Store| Q[Audio Chunks]
-    P -->|Store| R[Intermediate Transcripts]
-    S[Output Directory] -->|Store| T[Final Transcripts]
-    S -->|Store| U[Summaries]
-    S -->|Store| V[Waveform Plots]
+    subgraph Text Processing
+        MergeTranscripts["Merge Transcriptions"]
+        ChunkText["Chunk Text\n(if needed)"]
     end
     
-    subgraph "Configuration"
-    W[Environment Variables] --> X[API Keys]
-    W --> Y[Model Selection]
-    W --> Z[Token Limits]
+    subgraph Summarization
+        SummarizeChoice{"Summarization\nModel"}
+        SummarizeGPT["Summarize with\nOpenAI GPT-4"]
+        SummarizeClaude["Summarize with\nAnthropic Claude"]
     end
     
-    AA[Main Script] --> AB[User Interface]
-    AB -->|Input| AC[Process Selection]
-    AC --> B
-    AC --> C
+    subgraph Memory Management
+        TempDir["Temporary Directory\n- Audio chunks\n- Intermediate transcripts"]
+        OutputDir["Output Directory\n- Final transcripts\n- Summaries\n- Waveform plots"]
+    end
     
-    AD[Logging] --> AE[Log Files]
+    Input --> Convert
+    Convert --> Diarize
+    Diarize --> Split
+    Split --> TranscribeChoice
+    TranscribeChoice -->|Local| TranscribeWhisper
+    TranscribeChoice -->|OpenAI| TranscribeOpenAI
+    TranscribeWhisper --> MergeTranscripts
+    TranscribeOpenAI --> MergeTranscripts
+    Input -->|Text Transcript| MergeTranscripts
+    MergeTranscripts --> ChunkText
+    ChunkText --> SummarizeChoice
+    SummarizeChoice -->|OpenAI| SummarizeGPT
+    SummarizeChoice -->|Anthropic| SummarizeClaude
+    SummarizeGPT --> Output
+    SummarizeClaude --> Output
+    MergeTranscripts --> Output
     
-    AF[Error Handling] --> AG[Exception Management]
+    Split -.->|Store| TempDir
+    TranscribeWhisper -.->|Store| TempDir
+    TranscribeOpenAI -.->|Store| TempDir
+    MergeTranscripts -.->|Store| OutputDir
+    SummarizeGPT -.->|Store| OutputDir
+    SummarizeClaude -.->|Store| OutputDir
     
-    N --> S
-    O --> S
-    L --> S
-    
-    classDef inputOutput fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef processing fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef model fill:#bfb,stroke:#333,stroke-width:2px;
-    classDef storage fill:#fbb,stroke:#333,stroke-width:2px;
-    classDef config fill:#ffb,stroke:#333,stroke-width:2px;
-    
-    class A,S inputOutput;
-    class B,C,D,E,F,G,H,L,M processing;
-    class I,J,N,O model;
-    class P,Q,R,T,U,V storage;
-    class W,X,Y,Z config;
+    classDef storage fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef process fill:#bbf,stroke:#333,stroke-width:2px;
+    classDef decision fill:#fbb,stroke:#333,stroke-width:2px;
+    class Input,Output,TempDir,OutputDir storage;
+    class Convert,Diarize,Split,TranscribeWhisper,TranscribeOpenAI,MergeTranscripts,ChunkText,SummarizeGPT,SummarizeClaude process;
+    class TranscribeChoice,SummarizeChoice decision;
 ```
 
 This detailed architecture illustrates how NeverForgetNotes processes both audio and text inputs, performs diarization and transcription, and generates summaries using advanced AI models, all while efficiently managing system resources.
@@ -158,13 +157,20 @@ This detailed architecture illustrates how NeverForgetNotes processes both audio
    Create a `.env` file in the project root and add:
 
    ```bash
-   HF_AUTH_TOKEN=your_hugging_face_auth_token
+   # OpenAI API key
    OPENAI_API_KEY=your_openai_api_key
+
+   # Anthropic API key
    ANTHROPIC_API_KEY=your_anthropic_api_key
+
+   # Hugging Face API key
+   HF_AUTH_TOKEN=your_hugging_face_auth_token
+
+   # Model names and token limits
    OPENAI_MODEL=gpt-4-turbo
-   OPENAI_MODEL_TOKEN_LIMIT=8000
+   OPENAI_MODEL_TOKEN_LIMIT=128000
    ANTHROPIC_MODEL=claude-3-5-sonnet-20240620
-   ANTHROPIC_MODEL_TOKEN_LIMIT=100000
+   ANTHROPIC_MODEL_TOKEN_LIMIT=2000000
    ```
 
 ## Usage
@@ -247,6 +253,95 @@ NeverForgetNotes/
 - `app/summarize.py`: Generating summaries using OpenAI or Anthropic models
 - `app/transcription.py`: Audio transcription using Whisper or OpenAI's API
 - `app/utils.py`: General utility functions (file operations, text processing, error handling)
+
+### Visualizing Modules
+
+```mermaid
+flowchart TD
+    Input[("Input Files\n(Audio/Transcripts)")]
+    Output[("Output Files")]
+    Config[".env Configuration"]
+    
+    subgraph Main["main.py"]
+        SetupLogging["Setup Logging"]
+        LoadEnv["Load Environment\nVariables"]
+        ListFiles["List Input Files"]
+        PromptSettings["Prompt for Settings"]
+        ProcessFiles["Process Files"]
+    end
+    
+    subgraph AudioProcessing["audio_processing.py"]
+        ConvertWAV["Convert to WAV\n(ffmpeg)"]
+        Diarize["Speaker Diarization\n(pyannote.audio)"]
+        SplitAudio["Split Audio\nby Speaker"]
+        TranscribeAudio["Transcribe Audio"]
+        MergeTranscripts["Merge Transcriptions"]
+        PlotWaveform["Plot Waveform"]
+    end
+    
+    subgraph Transcription["transcription.py"]
+        TranscribeChoice{"Transcription\nMethod"}
+        TranscribeWhisper["Local Whisper\nTranscription"]
+        TranscribeOpenAI["OpenAI API\nTranscription"]
+    end
+    
+    subgraph Summarization["summarize.py"]
+        ChunkText["Chunk Text\n(if needed)"]
+        SummarizeChoice{"Summarization\nModel"}
+        SummarizeGPT["Summarize with\nOpenAI GPT-4"]
+        SummarizeClaude["Summarize with\nAnthropic Claude"]
+    end
+    
+    subgraph MemoryManagement["utils.py"]
+        CreateDirs["Create Output\nDirectories"]
+        TempDir["Temporary Directory\n- Audio chunks\n- Intermediate transcripts"]
+        OutputDir["Output Directory\n- Final transcripts\n- Summaries\n- Waveform plots"]
+        CleanupTemp["Cleanup Temporary\nFiles"]
+    end
+    
+    subgraph ErrorHandling["utils.py"]
+        SafeFileOps["Safe File Operations"]
+        ExceptionLogging["Log Exceptions"]
+    end
+
+    Config --> LoadEnv
+    Input --> ListFiles
+    ListFiles --> PromptSettings
+    PromptSettings --> ProcessFiles
+    ProcessFiles --> ConvertWAV
+    ConvertWAV --> Diarize
+    Diarize --> SplitAudio
+    SplitAudio --> TranscribeAudio
+    TranscribeAudio --> TranscribeChoice
+    TranscribeChoice -->|Local| TranscribeWhisper
+    TranscribeChoice -->|OpenAI| TranscribeOpenAI
+    TranscribeWhisper & TranscribeOpenAI --> MergeTranscripts
+    MergeTranscripts --> ChunkText
+    ChunkText --> SummarizeChoice
+    SummarizeChoice -->|OpenAI| SummarizeGPT
+    SummarizeChoice -->|Anthropic| SummarizeClaude
+    MergeTranscripts --> PlotWaveform
+    SummarizeGPT & SummarizeClaude & PlotWaveform --> Output
+    
+    ProcessFiles -.-> CreateDirs
+    SplitAudio & TranscribeWhisper & TranscribeOpenAI -.-> TempDir
+    MergeTranscripts & SummarizeGPT & SummarizeClaude & PlotWaveform -.-> OutputDir
+    ProcessFiles -.-> CleanupTemp
+    
+    SafeFileOps -.-> ConvertWAV & Diarize & SplitAudio & TranscribeAudio & MergeTranscripts & PlotWaveform
+    ExceptionLogging -.-> ProcessFiles
+    
+    classDef config fill:#5CCCCC,stroke:#333,stroke-width:2px;
+    classDef storage fill:#FF9999,stroke:#333,stroke-width:2px;
+    classDef process fill:#99CC99,stroke:#333,stroke-width:2px;
+    classDef decision fill:#FFCC99,stroke:#333,stroke-width:2px;
+    classDef module fill:#9999FF,stroke:#333,stroke-width:2px;
+    class Config config;
+    class Input,Output,TempDir,OutputDir storage;
+    class SetupLogging,LoadEnv,ListFiles,PromptSettings,ProcessFiles,ConvertWAV,Diarize,SplitAudio,TranscribeAudio,MergeTranscripts,PlotWaveform,TranscribeWhisper,TranscribeOpenAI,ChunkText,SummarizeGPT,SummarizeClaude,CreateDirs,CleanupTemp,SafeFileOps,ExceptionLogging process;
+    class TranscribeChoice,SummarizeChoice decision;
+    class Main,AudioProcessing,Transcription,Summarization,MemoryManagement,ErrorHandling module;
+```
 
 ## Testing
 
